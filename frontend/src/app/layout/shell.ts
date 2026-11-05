@@ -867,6 +867,7 @@ export class Shell {
           { label: 'Transaksi', href: '/transaksi', icon: 'bi-receipt' },
           { label: 'Produk', href: '/admin/products', icon: 'bi-cup-straw' },
           { label: 'Kategori', href: '/admin/categories', icon: 'bi-tags' },
+          { label: 'Laporan', href: '/admin/reports', icon: 'bi-bar-chart-line' },
         ]
       : [
           { label: 'Kasir / POS', href: '/kasir', icon: 'bi-cart3' },

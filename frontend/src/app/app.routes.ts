@@ -45,6 +45,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin/product-form').then((m) => m.ProductForm),
       },
       {
+        path: 'admin/reports',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () => import('./pages/admin/reports').then((m) => m.Reports),
+      },
+      {
         path: 'kasir',
         canActivate: [roleGuard('kasir', 'admin')],
         loadComponent: () => import('./pages/kasir/pos').then((m) => m.Pos),
