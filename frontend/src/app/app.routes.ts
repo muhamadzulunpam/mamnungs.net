@@ -19,6 +19,26 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin/dashboard').then((m) => m.Dashboard),
       },
       {
+        path: 'admin/categories',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () => import('./pages/admin/categories').then((m) => m.Categories),
+      },
+      {
+        path: 'admin/products',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () => import('./pages/admin/products').then((m) => m.Products),
+      },
+      {
+        path: 'admin/products/new',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () => import('./pages/admin/product-form').then((m) => m.ProductForm),
+      },
+      {
+        path: 'admin/products/:id/edit',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () => import('./pages/admin/product-form').then((m) => m.ProductForm),
+      },
+      {
         path: 'kasir',
         canActivate: [roleGuard('kasir', 'admin')],
         loadComponent: () => import('./pages/kasir/pos').then((m) => m.Pos),

@@ -4,6 +4,9 @@ using Mamnungs.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+// Pastikan folder upload ada sebelum aplikasi dibuat, supaya wwwroot terdeteksi
+Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products"));
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(o =>
@@ -19,6 +22,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
 
 builder.Services.AddAuthentication("Bearer").AddJwtBearer(o =>
 {
+    o.MapInboundClaims = false;   
     o.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -47,6 +51,8 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     DbSeeder.Seed(db);
 }
+
+app.UseStaticFiles();
 
 app.UseCors();
 app.UseAuthentication();
