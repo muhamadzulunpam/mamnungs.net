@@ -58,3 +58,72 @@ export interface CheckoutResult {
   change: number;
   createdAt: string;
 }
+
+export interface OrderListItem {
+  id: number;
+  invoiceNumber: string;
+  createdAt: string;
+  cashierName: string;
+  paymentMethod: string;
+  total: number;
+  status: string;
+}
+
+export interface OrdersResponse extends Paged<OrderListItem> {
+  summary: { count: number; total: number };
+}
+
+export interface ReceiptItem {
+  name: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface Receipt {
+  id: number;
+  invoiceNumber: string;
+  createdAt: string;
+  cashierName: string;
+  paymentMethod: string;
+  status: string;
+  subtotal: number;
+  discount: number;
+  total: number;
+  amountReceived: number | null;
+  changeAmount: number | null;
+  notes: string | null;
+  items: ReceiptItem[];
+  store: { name: string; address: string };
+}
+export interface DashboardData {
+  stats: {
+    revenue: number;
+    revenueChange: number | null;
+    orders: number;
+    ordersChange: number | null;
+    todayRevenue: number;
+    todayOrders: number;
+    products: number;
+  };
+  weekly: { date: string; value: number }[];
+  topProducts: { name: string; sold: number; revenue: number }[];
+  recentOrders: {
+    id: number;
+    invoice: string;
+    cashier: string;
+    items: string;
+    total: number;
+    status: string;
+    createdAt: string;
+  }[];
+}
+
+export interface ReportData {
+  from: string;
+  to: string;
+  summary: { total: number; count: number; average: number };
+  byMethod: { method: string; count: number; total: number }[];
+  daily: { date: string; count: number; total: number }[];
+  topProducts: { name: string; sold: number; revenue: number }[];
+}

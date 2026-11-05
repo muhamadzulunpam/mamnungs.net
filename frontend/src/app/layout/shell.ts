@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, HostListener } from '@angular/core
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../core/auth.service';
-import { ToastService } from '../core/toast.service'; // <-- A) TAMBAHAN IMPORT
+import { ToastService } from '../core/toast.service';
 
 @Component({
   selector: 'app-shell',
@@ -841,7 +841,7 @@ import { ToastService } from '../core/toast.service'; // <-- A) TAMBAHAN IMPORT
 })
 export class Shell {
   auth = inject(AuthService);
-  toast = inject(ToastService); // <-- B) TAMBAHAN INJECT TOAST SERVICE
+  toast = inject(ToastService);
   router = inject(Router);
 
   // ===== STATE =====
@@ -859,21 +859,23 @@ export class Shell {
       .toUpperCase()
   );
 
-  // <-- B) UPDATE MENU ADMIN
-  menus = computed(() =>
+   menus = computed(() =>
     this.auth.user()?.role === 'admin'
       ? [
           { label: 'Dashboard', href: '/admin/dashboard', icon: 'bi-speedometer2' },
           { label: 'Kasir / POS', href: '/kasir', icon: 'bi-cart3' },
+          { label: 'Transaksi', href: '/transaksi', icon: 'bi-receipt' },
           { label: 'Produk', href: '/admin/products', icon: 'bi-cup-straw' },
           { label: 'Kategori', href: '/admin/categories', icon: 'bi-tags' },
+          { label: 'Laporan', href: '/admin/reports', icon: 'bi-bar-chart-line' },
         ]
-      : [{ label: 'Kasir / POS', href: '/kasir', icon: 'bi-cart3' }]
+      : [
+          { label: 'Kasir / POS', href: '/kasir', icon: 'bi-cart3' },
+          { label: 'Transaksi', href: '/transaksi', icon: 'bi-receipt' },
+        ]
   );
 
-  // ===== LIFECYCLE =====
   constructor() {
-    // Restore collapse state
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved !== null) {
       this.sidebarCollapsed.set(saved === '1');

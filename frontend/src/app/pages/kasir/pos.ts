@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router'; // <--- a) TAMBAHAN IMPORT
 import { CommonModule } from '@angular/common';
 import { fileUrl } from '../../core/config';
 import { errorMessages } from '../../core/errors';
@@ -10,7 +11,7 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RupiahPipe],
+  imports: [CommonModule, FormsModule, RouterLink, RupiahPipe], // <--- a) MASUKKAN RouterLink
   template: `
     <!-- ============ HEADER ============ -->
     <div class="pos-header">
@@ -125,6 +126,10 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
                 <div class="label">Kembalian</div>
                 <div class="value">{{ s.change | rupiah }}</div>
               </div>
+
+               <a [routerLink]="['/transaksi', s.orderId, 'struk']" class="btn-outline-struk">
+                <i class="bi bi-printer"></i> Lihat / Cetak Struk
+              </a>
 
               <button class="btn-new-trx" (click)="newTransaction()">
                 <i class="bi bi-plus-lg"></i> Transaksi Baru
@@ -462,6 +467,32 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
       .menu-card-body { padding: 8px 10px 10px; }
       .menu-card-name { font-size: 12px; }
       .menu-card-price { font-size: 12px; }
+    }
+      .btn-outline-struk {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      background: #ffffff;
+      border: 1.5px solid #e2e8d5;
+      border-radius: 12px;
+      color: #4a5a3d;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .btn-outline-struk:hover {
+      border-color: #84bd33;
+      color: #6ba324;
+      background: #f8fbf3;
+      transform: translateY(-1px);
     }
   `,
 })
