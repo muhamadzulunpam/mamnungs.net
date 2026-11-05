@@ -7,6 +7,12 @@ export const routes: Routes = [
     canActivate: [guestGuard],
     loadComponent: () => import('./pages/login').then((m) => m.Login),
   },
+  // Struk di luar layout (tanpa sidebar) supaya bersih saat dicetak
+  {
+    path: 'transaksi/:id/struk',
+    canActivate: [roleGuard('kasir', 'admin')],
+    loadComponent: () => import('./pages/transaksi/receipt').then((m) => m.Receipt),
+  },
   {
     path: '',
     canActivate: [authGuard],
@@ -42,6 +48,11 @@ export const routes: Routes = [
         path: 'kasir',
         canActivate: [roleGuard('kasir', 'admin')],
         loadComponent: () => import('./pages/kasir/pos').then((m) => m.Pos),
+      },
+      {
+        path: 'transaksi',
+        canActivate: [roleGuard('kasir', 'admin')],
+        loadComponent: () => import('./pages/transaksi/history').then((m) => m.History),
       },
     ],
   },

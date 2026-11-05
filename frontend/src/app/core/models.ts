@@ -58,3 +58,41 @@ export interface CheckoutResult {
   change: number;
   createdAt: string;
 }
+
+export interface OrderListItem {
+  id: number;
+  invoiceNumber: string;
+  createdAt: string;
+  cashierName: string;
+  paymentMethod: string;
+  total: number;
+  status: string;
+}
+
+export interface OrdersResponse extends Paged<OrderListItem> {
+  summary: { count: number; total: number };
+}
+
+export interface ReceiptItem {
+  name: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface Receipt {
+  id: number;
+  invoiceNumber: string;
+  createdAt: string;
+  cashierName: string;
+  paymentMethod: string;
+  status: string;
+  subtotal: number;
+  discount: number;
+  total: number;
+  amountReceived: number | null;
+  changeAmount: number | null;
+  notes: string | null;
+  items: ReceiptItem[];
+  store: { name: string; address: string };
+}

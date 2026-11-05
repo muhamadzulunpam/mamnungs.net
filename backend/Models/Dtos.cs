@@ -15,3 +15,22 @@ public record PosProductDto(int Id, int CategoryId, string Name, int Price, stri
 public record CheckoutResult(
     int OrderId, string InvoiceNumber, int Total,
     int AmountReceived, int Change, DateTime CreatedAt);
+
+public record OrderListDto(
+    int Id, string InvoiceNumber, DateTime CreatedAt, string CashierName,
+    string PaymentMethod, int Total, string Status);
+
+public record OrderSummaryDto(int Count, int Total);
+
+public record PagedOrders(
+    List<OrderListDto> Items, int Total, int Page, int PageSize, int TotalPages, OrderSummaryDto Summary);
+
+public record StoreDto(string Name, string Address);
+
+public record ReceiptItemDto(string Name, int Price, int Quantity, int Subtotal);
+
+public record ReceiptDto(
+    int Id, string InvoiceNumber, DateTime CreatedAt, string CashierName,
+    string PaymentMethod, string Status, int Subtotal, int Discount, int Total,
+    int? AmountReceived, int? ChangeAmount, string? Notes,
+    List<ReceiptItemDto> Items, StoreDto Store);
