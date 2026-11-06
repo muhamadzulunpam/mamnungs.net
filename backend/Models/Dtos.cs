@@ -13,9 +13,13 @@ public record PosCategoryDto(int Id, string Name);
 public record PosProductDto(int Id, int CategoryId, string Name, int Price, string? Image);
 
 public record CheckoutResult(
-    int OrderId, string InvoiceNumber, int Total,
-    int AmountReceived, int Change, DateTime CreatedAt);
+    int OrderId, string InvoiceNumber, int Total, string PaymentMethod, string Status,
+    int? AmountReceived, int? Change, DateTime CreatedAt);
 
+public record PaymentInfoDto(
+    int OrderId, string InvoiceNumber, int Total, string Status,
+    string? QrUrl, DateTime? ExpiresAt, bool IsSandbox);
+    
 public record OrderListDto(
     int Id, string InvoiceNumber, DateTime CreatedAt, string CashierName,
     string PaymentMethod, int Total, string Status);

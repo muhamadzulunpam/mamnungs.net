@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router'; // <--- a) TAMBAHAN IMPORT
+import { Router, RouterLink } from '@angular/router'; // <--- a) Import Router
 import { CommonModule } from '@angular/common';
 import { fileUrl } from '../../core/config';
 import { errorMessages } from '../../core/errors';
@@ -11,7 +11,7 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, RupiahPipe], // <--- a) MASUKKAN RouterLink
+  imports: [CommonModule, FormsModule, RouterLink, RupiahPipe],
   template: `
     <!-- ============ HEADER ============ -->
     <div class="pos-header">
@@ -32,12 +32,8 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
           <div class="pos-search">
             <i class="bi bi-search"></i>
             <input 
-              #searchInput
-              type="text" 
-              placeholder="Cari menu... (F2)" 
-              autocomplete="off"
-              [ngModel]="search()" 
-              (ngModelChange)="search.set($event)" 
+              #searchInput type="text" placeholder="Cari menu... (F2)" autocomplete="off"
+              [ngModel]="search()" (ngModelChange)="search.set($event)" 
             />
             @if (search()) {
               <button class="pos-search-clear" (click)="search.set('')"><i class="bi bi-x-lg"></i></button>
@@ -72,11 +68,7 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
         @if (filtered().length > 0) {
           <div class="menu-grid">
             @for (p of filtered(); track p.id) {
-              <button 
-                class="menu-card" 
-                [class.in-cart]="qtyInCart(p.id) > 0"
-                (click)="add(p)"
-              >
+              <button class="menu-card" [class.in-cart]="qtyInCart(p.id) > 0" (click)="add(p)">
                 <div class="menu-card-img">
                   @if (img(p.image); as src) {
                     <img [src]="src" alt="Menu" />
@@ -111,7 +103,7 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
       <aside class="pos-cart">
         <div class="cart-card">
           @if (success(); as s) {
-            <!-- Success Screen -->
+            <!-- Success Screen (Hanya untuk CASH) -->
             <div class="cart-success">
               <div class="success-icon"><i class="bi bi-check-circle-fill"></i></div>
               <h3 class="success-title">Pembayaran Berhasil!</h3>
@@ -127,11 +119,12 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
                 <div class="value">{{ s.change | rupiah }}</div>
               </div>
 
-               <a [routerLink]="['/transaksi', s.orderId, 'struk']" class="btn-outline-struk">
+              <!-- Tombol struk -->
+              <a [routerLink]="['/transaksi', s.orderId, 'struk']" class="btn-outline-struk">
                 <i class="bi bi-printer"></i> Lihat / Cetak Struk
               </a>
 
-              <button class="btn-new-trx" (click)="newTransaction()">
+              <button class="btn-new-trx mt-2" (click)="newTransaction()">
                 <i class="bi bi-plus-lg"></i> Transaksi Baru
               </button>
             </div>
@@ -219,40 +212,62 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
                          [ngModel]="notes()" (ngModelChange)="notes.set($event)" />
                 </div>
 
-                <!-- Cash Input -->
-                <div class="cart-field">
-                  <label class="cart-field-label"><i class="bi bi-cash-stack"></i> Uang Diterima</label>
-                  <div class="cash-input-wrap">
-                    <span class="cash-prefix">Rp</span>
-                    <input type="text" inputmode="numeric" class="cash-input" placeholder="0"
-                           [ngModel]="receivedDisplay()" (ngModelChange)="onReceivedInput($event)" />
+                <!-- METODE PEMBAYARAN (UPDATED) -->
+                <div class="method-selector mb-3">
+                  <button type="button" class="method-btn" [class.active]="method() === 'CASH'" (click)="method.set('CASH')">
+                    <i class="bi bi-cash-coin"></i> Tunai
+                  </button>
+                  <button type="button" class="method-btn" [class.active]="method() === 'QRIS'" (click)="method.set('QRIS')">
+                    <i class="bi bi-qr-code"></i> QRIS
+                  </button>
+                </div>
+
+                <!-- KONDISI: CASH -->
+                @if (method() === 'CASH') {
+                  <div class="cart-field">
+                    <label class="cart-field-label"><i class="bi bi-cash-stack"></i> Uang Diterima</label>
+                    <div class="cash-input-wrap">
+                      <span class="cash-prefix">Rp</span>
+                      <input type="text" inputmode="numeric" class="cash-input" placeholder="0"
+                             [ngModel]="receivedDisplay()" (ngModelChange)="onReceivedInput($event)" />
+                    </div>
                   </div>
-                </div>
 
-                <!-- Quick Cash -->
-                <div class="quick-cash">
-                  @for (n of quickAmounts(); track n) {
-                    <button class="quick-cash-btn" 
-                            [class.active]="received() === n" 
-                            [class.is-exact]="n === total()"
-                            (click)="received.set(n)">
-                      {{ n === total() ? 'Uang Pas' : (n | rupiah) }}
-                    </button>
-                  }
-                </div>
+                  <div class="quick-cash">
+                    @for (n of quickAmounts(); track n) {
+                      <button class="quick-cash-btn" 
+                              [class.active]="received() === n" 
+                              [class.is-exact]="n === total()"
+                              (click)="received.set(n)">
+                        {{ n === total() ? 'Uang Pas' : (n | rupiah) }}
+                      </button>
+                    }
+                  </div>
 
-                <!-- Change -->
-                <div class="change-row" [class.is-negative]="change() < 0">
-                  <span class="change-label"><i class="bi bi-arrow-return-left"></i> Kembalian</span>
-                  <span class="change-value">
-                    {{ change() < 0 ? '− ' + (-change() | rupiah) : (change() | rupiah) }}
-                  </span>
-                </div>
+                  <div class="change-row" [class.is-negative]="change() < 0">
+                    <span class="change-label"><i class="bi bi-arrow-return-left"></i> Kembalian</span>
+                    <span class="change-value">
+                      {{ change() < 0 ? '− ' + (-change() | rupiah) : (change() | rupiah) }}
+                    </span>
+                  </div>
+                }
 
-                <!-- Pay Button -->
+                <!-- KONDISI: QRIS -->
+                @if (method() === 'QRIS') {
+                  <div class="qris-info">
+                    <i class="bi bi-info-circle-fill"></i>
+                    QR akan dibuat setelah klik tombol di bawah. Pelanggan scan dengan e-wallet atau m-banking.
+                  </div>
+                }
+
+                <!-- Tombol Bayar -->
                 <button class="pay-btn" [disabled]="!canPay()" (click)="pay()">
                   @if (!paying()) {
-                    <span><i class="bi bi-check-circle-fill"></i> Bayar Tunai <span class="pay-amount">{{ total() | rupiah }}</span></span>
+                    @if (method() === 'CASH') {
+                      <span><i class="bi bi-check-circle-fill"></i> Bayar Tunai <span class="pay-amount">{{ total() | rupiah }}</span></span>
+                    } @else {
+                      <span><i class="bi bi-qr-code"></i> Buat QRIS</span>
+                    }
                   } @else {
                     <span class="pay-spinner"><span class="mini-spinner"></span> Memproses...</span>
                   }
@@ -413,6 +428,19 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
     .cart-input { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8d5; border-radius: 10px; background: #ffffff; font-size: 13px; font-family: inherit; color: #14210a; transition: all 0.2s; outline: none; }
     .cart-input:focus { border-color: #84bd33; box-shadow: 0 0 0 4px rgba(132, 189, 51, 0.12); }
 
+    /* METODE PEMBAYARAN SELECTOR */
+    .method-selector { display: flex; gap: 10px; padding: 4px; background: #f4f7ee; border-radius: 12px; }
+    .method-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;
+      border: 1.5px solid transparent; border-radius: 9px; background: transparent;
+      font-family: inherit; font-size: 13px; font-weight: 700; color: #6b7a5e; cursor: pointer; transition: all 0.2s;
+    }
+    .method-btn:hover { color: #14210a; background: rgba(255, 255, 255, 0.5); }
+    .method-btn.active { background: #ffffff; border-color: #84bd33; color: #6ba324; box-shadow: 0 4px 12px -4px rgba(107, 163, 36, 0.3); }
+
+    .qris-info { display: flex; align-items: flex-start; gap: 8px; padding: 12px; background: #f0f8e5; border: 1px solid #d8e8bf; border-radius: 12px; color: #4a5a3d; font-size: 12.5px; line-height: 1.5; margin-bottom: 16px; }
+    .qris-info i { color: #6ba324; font-size: 14px; margin-top: 2px; }
+
     .cash-input-wrap { position: relative; display: flex; align-items: center; }
     .cash-prefix { position: absolute; left: 14px; font-size: 13px; font-weight: 800; color: #6ba324; pointer-events: none; }
     .cash-input { width: 100%; padding: 11px 12px 11px 40px; border: 1.5px solid #e2e8d5; border-radius: 10px; background: #ffffff; font-family: ui-monospace, monospace; font-size: 15px; font-weight: 800; color: #14210a; transition: all 0.2s; outline: none; }
@@ -455,6 +483,9 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
     .success-change .label { font-size: 11.5px; font-weight: 700; color: #558a1a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .success-change .value { font-size: 32px; font-weight: 800; color: #14210a; font-family: ui-monospace, monospace; letter-spacing: -1px; line-height: 1; }
 
+    .btn-outline-struk { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: #ffffff; border: 1.5px solid #e2e8d5; border-radius: 12px; color: #4a5a3d; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-decoration: none; margin-bottom: 8px; }
+    .btn-outline-struk:hover { border-color: #84bd33; color: #6ba324; background: #f8fbf3; transform: translateY(-1px); }
+
     .btn-new-trx { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: linear-gradient(135deg, #84bd33, #6ba324); color: #ffffff; border: none; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 20px -8px rgba(107, 163, 36, 0.6); }
     .btn-new-trx:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -8px rgba(107, 163, 36, 0.7); }
 
@@ -468,36 +499,11 @@ import { RupiahPipe } from '../../core/rupiah.pipe';
       .menu-card-name { font-size: 12px; }
       .menu-card-price { font-size: 12px; }
     }
-      .btn-outline-struk {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px;
-      background: #ffffff;
-      border: 1.5px solid #e2e8d5;
-      border-radius: 12px;
-      color: #4a5a3d;
-      font-family: inherit;
-      font-size: 13.5px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      margin-bottom: 8px;
-    }
-
-    .btn-outline-struk:hover {
-      border-color: #84bd33;
-      color: #6ba324;
-      background: #f8fbf3;
-      transform: translateY(-1px);
-    }
   `,
 })
 export class Pos implements OnInit {
   private api = inject(PosService);
+  private router = inject(Router); // <--- b) Inject Router
 
   categories = signal<PosCategory[]>([]);
   products = signal<PosProduct[]>([]);
@@ -506,9 +512,10 @@ export class Pos implements OnInit {
 
   cart = signal<CartItem[]>([]);
   notes = signal('');
-  
-  // received signal menyimpan nilai asli (number)
   received = signal<number | null>(null);
+  
+  // <--- b) Tambahan Method Signal
+  method = signal<'CASH' | 'QRIS'>('CASH');
   
   paying = signal(false);
   errors = signal<string[]>([]);
@@ -516,7 +523,6 @@ export class Pos implements OnInit {
 
   img = fileUrl;
 
-  // Computed
   filtered = computed(() => {
     const q = this.search().trim().toLowerCase();
     const cat = this.activeCategory();
@@ -529,9 +535,11 @@ export class Pos implements OnInit {
   totalItems = computed(() => this.cart().reduce((sum, i) => sum + i.quantity, 0));
   change = computed(() => (this.received() ?? 0) - this.total());
 
-  canPay = computed(
-    () => this.cart().length > 0 && this.received() !== null && this.change() >= 0 && !this.paying()
-  );
+  // <--- c) Update canPay logic
+  canPay = computed(() => {
+    if (this.cart().length === 0 || this.paying()) return false;
+    return this.method() === 'QRIS' || (this.received() !== null && this.change() >= 0);
+  });
 
   quickAmounts = computed(() => {
     const t = this.total();
@@ -539,7 +547,6 @@ export class Pos implements OnInit {
     return [...new Set([t, ...[20000, 50000, 100000, 200000].filter((n) => n >= t)])];
   });
 
-  // Received Display (Format Rupiah)
   receivedDisplay = computed(() => {
     const val = this.received();
     return val ? new Intl.NumberFormat('id-ID').format(val) : '';
@@ -556,7 +563,6 @@ export class Pos implements OnInit {
     });
   }
 
-  // Helper
   categoryCount(catId: number) {
     return this.products().filter((p) => p.categoryId === catId).length;
   }
@@ -574,7 +580,6 @@ export class Pos implements OnInit {
     input.value = numValue ? new Intl.NumberFormat('id-ID').format(numValue) : '';
   }
 
-  // Cart Actions
   add(p: PosProduct) {
     this.success.set(null);
     this.cart.update((items) => {
@@ -606,14 +611,12 @@ export class Pos implements OnInit {
     const input = event.target as HTMLInputElement;
     let val = parseInt(input.value, 10);
     if (isNaN(val) || val <= 0) {
-      // Hapus jika 0 atau kosong
       this.cart.update((items) => items.filter((i) => i.productId !== productId));
     } else {
       val = Math.min(val, 99);
       this.cart.update((items) =>
         items.map((i) => (i.productId === productId ? { ...i, quantity: val } : i))
       );
-      // Update input value jika di-clamp
       input.value = String(val);
     }
   }
@@ -627,6 +630,7 @@ export class Pos implements OnInit {
     this.success.set(null);
   }
 
+  // <--- d) Update method pay() logic
   pay() {
     if (!this.canPay()) return;
 
@@ -637,13 +641,20 @@ export class Pos implements OnInit {
       .checkout({
         items: this.cart().map((i) => ({ productId: i.productId, quantity: i.quantity })),
         notes: this.notes(),
-        amountReceived: this.received()!,
+        paymentMethod: this.method(),
+        amountReceived: this.method() === 'CASH' ? this.received() : null,
       })
       .subscribe({
         next: (res) => {
-          this.success.set(res);
           this.resetForm();
           this.paying.set(false);
+
+          if (res.paymentMethod === 'QRIS') {
+            this.router.navigate(['/kasir/pembayaran', res.orderId]);
+            return;
+          }
+
+          this.success.set(res);
           this.loadMenu();
         },
         error: (err) => {
@@ -659,5 +670,6 @@ export class Pos implements OnInit {
     this.notes.set('');
     this.received.set(null);
     this.errors.set([]);
+    // Jangan reset method(), biarkan kasir memilih default berikutnya
   }
 }
