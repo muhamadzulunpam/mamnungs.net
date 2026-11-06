@@ -47,16 +47,29 @@ export interface CartItem {
 export interface CheckoutPayload {
   items: { productId: number; quantity: number }[];
   notes: string;
-  amountReceived: number;
+  paymentMethod: 'CASH' | 'QRIS';
+  amountReceived: number | null;
 }
 
 export interface CheckoutResult {
   orderId: number;
   invoiceNumber: string;
   total: number;
-  amountReceived: number;
-  change: number;
+  paymentMethod: string;
+  status: string;
+  amountReceived: number | null;
+  change: number | null;
   createdAt: string;
+}
+
+export interface PaymentInfo {
+  orderId: number;
+  invoiceNumber: string;
+  total: number;
+  status: string;
+  qrUrl: string | null;
+  expiresAt: string | null;
+  isSandbox: boolean;
 }
 
 export interface OrderListItem {

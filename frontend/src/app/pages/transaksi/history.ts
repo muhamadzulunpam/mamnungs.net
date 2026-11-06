@@ -160,6 +160,9 @@ const STATUS: Record<string, { label: string; cls: string; icon: string }> = {
                     </span>
                   </td>
                   <td class="text-end">
+                    @if (o.status === 'PENDING' && o.paymentMethod === 'QRIS') {
+                      <a [routerLink]="['/kasir/pembayaran', o.id]" class="btn btn-sm btn-warning me-1">Lanjutkan</a>
+                    }
                     <a [routerLink]="['/transaksi', o.id, 'struk']" class="btn-action btn-receipt">
                       <i class="bi bi-printer"></i><span>Struk</span>
                     </a>

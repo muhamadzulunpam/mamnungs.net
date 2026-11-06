@@ -138,6 +138,12 @@ namespace Mamnungs.Api.Migrations
                     b.Property<int?>("ChangeAmount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GatewayOrderId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("INTEGER");
 
@@ -152,6 +158,9 @@ namespace Mamnungs.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("QrUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -160,6 +169,9 @@ namespace Mamnungs.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayOrderId")
+                        .IsUnique();
 
                     b.HasIndex("OrderId")
                         .IsUnique();

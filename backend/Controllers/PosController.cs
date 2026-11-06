@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Mamnungs.Api.Data;
 using Mamnungs.Api.Helpers;
 using Mamnungs.Api.Models;
+using Mamnungs.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -12,7 +13,7 @@ namespace Mamnungs.Api.Controllers;
 [ApiController]
 [Route("api/pos")]
 [Authorize(Roles = "kasir,admin")]
-public class PosController(AppDbContext db) : ControllerBase
+public class PosController(AppDbContext db, MidtransService midtrans) : ControllerBase
 {
     public class CheckoutItem
     {
@@ -32,7 +33,9 @@ public class PosController(AppDbContext db) : ControllerBase
         [StringLength(500, ErrorMessage = "Catatan maksimal 500 karakter.")]
         public string? Notes { get; set; }
 
-        [Required(ErrorMessage = "Isi uang yang diterima.")]
+        [RegularExpression("^(CASH|QRIS)$", ErrorMessage = "Metode pembayaran tidak valid.")]
+        public string PaymentMethod { get; set; } = "CASH";
+
         [Range(0, 100_000_000, ErrorMessage = "Jumlah uang tidak valid.")]
         public int? AmountReceived { get; set; }
     }
@@ -87,19 +90,33 @@ public class PosController(AppDbContext db) : ControllerBase
 
         var subtotal = lines.Sum(l => products[l.ProductId].Price * l.Quantity);
         var total = subtotal;
-        var received = req.AmountReceived!.Value;
 
-        if (received < total)
+        var method = req.PaymentMethod;
+        var isCash = method == "CASH";
+        var received = req.AmountReceived ?? 0;
+
+        if (isCash)
         {
-            ModelState.AddModelError("AmountReceived", "Uang yang diterima kurang dari total.");
-            return ValidationProblem(ModelState);
+            if (req.AmountReceived is null)
+            {
+                ModelState.AddModelError("AmountReceived", "Isi uang yang diterima.");
+                return ValidationProblem(ModelState);
+            }
+
+            if (received < total)
+            {
+                ModelState.AddModelError("AmountReceived", "Uang yang diterima kurang dari total.");
+                return ValidationProblem(ModelState);
+            }
         }
 
         var userId = User.Id();
         var notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim();
 
         // Nomor invoice dijaga unique index. Kalau dua kasir bentrok, coba lagi dengan nomor berikutnya.
-        for (var attempt = 1; attempt <= 5; attempt++)
+        Order? saved = null;
+
+        for (var attempt = 1; attempt <= 5 && saved is null; attempt++)
         {
             var now = DateTime.UtcNow;
             var invoice = await NextInvoiceNumber();
@@ -111,8 +128,8 @@ public class PosController(AppDbContext db) : ControllerBase
                 Subtotal = subtotal,
                 Discount = 0,
                 Total = total,
-                PaymentMethod = "CASH",
-                Status = "PAID",
+                PaymentMethod = method,
+                Status = isCash ? "PAID" : "PENDING",
                 Notes = notes,
                 CreatedAt = now,
                 Items = lines.Select(l =>
@@ -129,13 +146,14 @@ public class PosController(AppDbContext db) : ControllerBase
                 }).ToList(),
                 Payment = new Payment
                 {
-                    PaymentMethod = "CASH",
-                    Provider = "CASH",
+                    PaymentMethod = method,
+                    Provider = isCash ? "CASH" : "MIDTRANS",
                     Amount = total,
-                    AmountReceived = received,
-                    ChangeAmount = received - total,
-                    Status = "PAID",
-                    PaidAt = now,
+                    AmountReceived = isCash ? received : null,
+                    ChangeAmount = isCash ? received - total : null,
+                    Status = isCash ? "PAID" : "PENDING",
+                    PaidAt = isCash ? now : null,
+                    GatewayOrderId = isCash ? null : $"{invoice}-{Guid.NewGuid().ToString("N")[..6]}",
                 },
             };
 
@@ -143,11 +161,9 @@ public class PosController(AppDbContext db) : ControllerBase
 
             try
             {
-                // SaveChanges berjalan dalam satu transaksi database:
-                // order, item, dan pembayaran tersimpan semua atau tidak sama sekali
+                // Order, item, dan pembayaran tersimpan dalam satu transaksi database
                 await db.SaveChangesAsync();
-
-                return Ok(new CheckoutResult(order.Id, order.InvoiceNumber, total, received, received - total, now));
+                saved = order;
             }
             catch (DbUpdateException ex) when (IsUniqueViolation(ex))
             {
@@ -155,12 +171,51 @@ public class PosController(AppDbContext db) : ControllerBase
             }
         }
 
-        return StatusCode(503, new { message = "Gagal membuat nomor invoice. Coba lagi." });
+        if (saved is null)
+            return StatusCode(503, new { message = "Gagal membuat nomor invoice. Coba lagi." });
+
+        if (isCash)
+        {
+            return Ok(new CheckoutResult(saved.Id, saved.InvoiceNumber, total, "CASH", "PAID",
+                received, received - total, saved.CreatedAt));
+        }
+
+        return await ChargeQris(saved);
+    }
+
+    // Minta QR ke Midtrans. Kalau gagal, order dibatalkan agar tidak menggantung.
+    private async Task<IActionResult> ChargeQris(Order order)
+    {
+        var items = order.Items.Select(i => new GatewayItem(
+            (i.ProductId ?? i.Id).ToString(), i.Price, i.Quantity,
+            i.ProductName.Length > 50 ? i.ProductName[..50] : i.ProductName)).ToList();
+
+        try
+        {
+            var charge = await midtrans.ChargeQrisAsync(order.Payment!.GatewayOrderId!, order.Total, items);
+
+            order.Payment.TransactionId = charge.TransactionId;
+            order.Payment.QrUrl = charge.QrUrl;
+            order.Payment.ExpiresAt = DateTime.UtcNow.AddMinutes(15);
+            await db.SaveChangesAsync();
+        }
+        catch (Exception ex) when (ex is MidtransException or HttpRequestException or TaskCanceledException)
+        {
+            order.Status = "CANCELLED";
+            order.Payment!.Status = "FAILED";
+            await db.SaveChangesAsync();
+
+            var message = ex is MidtransException ? ex.Message : "Tidak dapat terhubung ke Midtrans.";
+            return StatusCode(502, new { message = $"Gagal membuat QRIS: {message}" });
+        }
+
+        return Ok(new CheckoutResult(order.Id, order.InvoiceNumber, order.Total, "QRIS", "PENDING",
+            null, null, order.CreatedAt));
     }
 
     private async Task<string> NextInvoiceNumber()
     {
-        var prefix = $"INV-{LocalNow():yyyyMMdd}-";
+        var prefix = $"INV-{Clock.NowJakarta:yyyyMMdd}-";
 
         var last = await db.Orders
             .Where(o => o.InvoiceNumber.StartsWith(prefix))
@@ -171,16 +226,6 @@ public class PosController(AppDbContext db) : ControllerBase
         var next = last is null ? 1 : int.Parse(last[^4..]) + 1;
 
         return $"{prefix}{next:D4}";
-    }
-
-    // Tanggal invoice memakai waktu Jakarta, bukan UTC
-    private static DateTime LocalNow()
-    {
-        TimeZoneInfo tz;
-        try { tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }
-        catch (TimeZoneNotFoundException) { tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); }
-
-        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
     }
 
     private static bool IsUniqueViolation(DbUpdateException ex) =>

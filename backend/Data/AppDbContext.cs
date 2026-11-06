@@ -37,5 +37,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<Payment>().HasOne(p => p.Order).WithOne(o => o.Payment)
             .HasForeignKey<Payment>(p => p.OrderId).OnDelete(DeleteBehavior.Cascade);
+        
+        b.Entity<Payment>().HasIndex(p => p.GatewayOrderId).IsUnique();
     }
 }

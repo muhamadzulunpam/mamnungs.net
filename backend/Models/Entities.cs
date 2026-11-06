@@ -76,4 +76,7 @@ public class Payment
     public int? ChangeAmount { get; set; }
     public string Status { get; set; } = "PENDING";
     public DateTime? PaidAt { get; set; }
+    public string? GatewayOrderId { get; set; }
+    public string? QrUrl { get; set; }
+    public DateTime? ExpiresAt { get; set; }
 }

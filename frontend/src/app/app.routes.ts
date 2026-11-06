@@ -55,6 +55,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/kasir/pos').then((m) => m.Pos),
       },
       {
+        path: 'kasir/pembayaran/:id',
+        canActivate: [roleGuard('kasir', 'admin')],
+        loadComponent: () => import('./pages/kasir/qris').then((m) => m.Qris),
+      },
+      {
         path: 'transaksi',
         canActivate: [roleGuard('kasir', 'admin')],
         loadComponent: () => import('./pages/transaksi/history').then((m) => m.History),
