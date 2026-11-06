@@ -1,11 +1,12 @@
 # Mamnungs POS (Angular + .NET)
 
-Aplikasi kasir (Point of Sale) berbasis web untuk usaha UMKM Es Teler. Frontend dibangun dengan **Angular**, backend dengan **ASP.NET Core Web API**, dan data disimpan di **SQLite** lewat **Entity Framework Core**. Hak akses dibagi menjadi **admin** dan **kasir** menggunakan **JWT**.
+Aplikasi kasir (Point of Sale) berbasis web untuk usaha UMKM Es Teler. Frontend dibangun dengan **Angular**, backend dengan **ASP.NET Core Web API**, dan data disimpan di **SQLite** lewat **Entity Framework Core**. Hak akses dibagi menjadi **admin** dan **kasir** menggunakan **JWT**. Sistem pembayaran mendukung **Tunai** dan **QRIS (Midtrans)**.
 
 ![Angular](https://img.shields.io/badge/Angular-DD0031?logo=angular&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-512BD4?logo=dotnet&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap_5-7952B3?logo=bootstrap&logoColor=white)
+![Midtrans](https://img.shields.io/badge/Midtrans-002B49?logo=midtrans&logoColor=white)
 
 ## Screenshot
 
@@ -17,12 +18,17 @@ Aplikasi kasir (Point of Sale) berbasis web untuk usaha UMKM Es Teler. Frontend 
 |---|---|
 | ![Struk](docs/screenshots/struk.png) | ![Laporan](docs/screenshots/laporan.png) |
 
+| Pembayaran QRIS |
+|---|
+| ![QRIS](docs/screenshots/qris.png) |
+
 ## Fitur
 
 ### Kasir
 - Menu produk dengan pencarian dan filter kategori
 - Keranjang: tambah, ubah jumlah, hapus item, catatan pesanan
-- Pembayaran **tunai**: uang diterima, tombol uang pas, kembalian otomatis
+- **Pembayaran Tunai**: uang diterima, tombol uang pas, kembalian otomatis
+- **Pembayaran QRIS (Midtrans)**: generate QR dinamis, pengecekan status otomatis (auto-polling), dan auto-redirect ke struk setelah lunas
 - Struk siap cetak (format thermal 58 mm)
 - Riwayat transaksi milik sendiri, difilter per tanggal
 
@@ -50,6 +56,7 @@ Aplikasi kasir (Point of Sale) berbasis web untuk usaha UMKM Es Teler. Frontend 
 - **Hanya transaksi `PAID`** yang dihitung sebagai penjualan.
 - **Upload foto** divalidasi (JPG/PNG/WebP, maks. 2 MB) dan disimpan dengan nama acak.
 - **Export CSV** memakai UTF-8 BOM (terbaca benar di Excel) dan nilai diamankan dari injeksi rumus.
+- **Integrasi Midtrans** menggunakan arsitektur *webhook/callback* yang aman. Status pesanan di-update secara *real-time* via polling dari frontend, dan nominal pembayaran divalidasi ulang di backend.
 
 ## Tech stack
 
@@ -60,6 +67,7 @@ Aplikasi kasir (Point of Sale) berbasis web untuk usaha UMKM Es Teler. Frontend 
 | Backend | ASP.NET Core Web API (controllers) |
 | ORM dan database | Entity Framework Core + SQLite |
 | Autentikasi | JWT Bearer + BCrypt |
+| Payment Gateway | Midtrans (Snap / Core API QRIS) |
 
 ## Arsitektur
 
@@ -71,7 +79,9 @@ ASP.NET Core API (localhost:5080)
    │  EF Core
    ▼
 SQLite (backend/mamnungs.db)
-```
+   │
+   ▼
+Midtrans Payment Gateway (API)
 
 ## Alur checkout
 
